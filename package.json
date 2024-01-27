@@ -1,0 +1,9 @@
+{
+  "name": "proxy-list",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "keywords": [],
+  "author": "João Otávio S (joao@squarecloud.app)",
+  "license": "MIT",
+  "description": "A lightweight, zero-dependency JavaScript code that efficiently consolidates proxies from multiple links and delivers a cached response. This streamlined solution ensures optimal performance and reliability, making it an ideal choice for web developers seeking a seamless and resource-efficient method for aggregating proxy data."
+}
