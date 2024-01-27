@@ -15,11 +15,6 @@ A lightweight, zero-dependency JavaScript code that efficiently consolidates pro
 git clone https://github.com/your-username/your-project.git
 cd your-project
 ```
-    
-2. Install dependencies
-```
-npm install
-```
 
 ## Usage
 Run the server
