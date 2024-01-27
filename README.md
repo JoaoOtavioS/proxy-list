@@ -12,8 +12,8 @@ A lightweight, zero-dependency JavaScript code that efficiently consolidates pro
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/your-project.git
-cd your-project
+git clone https://github.com/JoaoOtavioS/proxy-list.git
+cd proxy-list
 ```
 
 ## Usage
