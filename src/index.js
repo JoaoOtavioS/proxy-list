@@ -2,63 +2,82 @@ const { createServer } = require("node:http");
 const { readFileSync } = require("node:fs");
 const { gzipSync } = require("node:zlib");
 
-let cachedProxies = [];
+const PORT = 80;
+const HOST = "0.0.0.0";
+const CACHE_DURATION_MS = 30 * 60 * 1000;
+
+let cachedCompressedProxies = null;
 let lastFetchTime = 0;
+let isFetching = false;
+
 const links = readFileSync("./data/proxies.txt", "utf-8").trim().split("\n");
-
-const server = createServer(async (req, res) => {
-    try {
-        const currentTime = Date.now();
-
-        if (cachedProxies.length === 0 || currentTime - lastFetchTime >= 15 * 60 * 1000) {
-            const proxies = await getAllProxies();
-            cachedProxies = proxies;
-            lastFetchTime = currentTime;
-        }
-
-        if (cachedProxies.length === 0) {
-            res.writeHead(500, { "Content-Type": "text/plain" });
-            res.end("No proxies found, fetch again!!");
-            return;
-        }
-
-        res.writeHead(200, { "Content-Type": "text/plain", "Content-Encoding": "gzip" });
-        const compressedData = gzipSync(Buffer.from(cachedProxies.join("")));
-        res.end(compressedData);
-    } catch (error) {
-        console.error(error);
-        res.writeHead(500, { "Content-Type": "text/plain" });
-        res.end("Internal Server Error");
-    }
-});
 
 const getAllProxies = async () => {
     const uniqueProxies = new Set();
 
     await Promise.all(links.map(async (link) => {
         try {
-            const res = await fetch(link).catch(() => null);
+            const res = await fetch(link, { signal: AbortSignal.timeout(15000) }).catch(() => null);
 
-            if (res && res.status === 200) {
+            if (res && res.ok) {
                 const body = await res.text();
-                const proxies = body.trim().split("\n");
-
-                proxies.forEach((proxy) => uniqueProxies.add(`${proxy.trim()}\n`));
+                body.trim().split("\n").forEach((proxy) => {
+                    if (proxy.trim()) uniqueProxies.add(proxy.trim());
+                });
             } else {
-                console.error(`[Proxy] ${link} returned ${res ? res.status : "error"} status code.`);
+                console.error(`[Proxy] ${link} returned ${res ? res.status : "error"}`);
             }
         } catch (error) {
-            console.error(error);
+            if (error.name !== 'TimeoutError') {
+                console.error(error);
+            }
         }
     }));
 
-    return Array.from(uniqueProxies);
+    return Array.from(uniqueProxies).join("\n");
 };
 
-const PORT = 80;
-const HOST = "0.0.0.0";
+const updateCache = async () => {
+    if (isFetching) return;
+    isFetching = true;
 
-getAllProxies();
+    try {
+        const proxiesText = await getAllProxies();
+        if (proxiesText) {
+            cachedCompressedProxies = gzipSync(Buffer.from(proxiesText));
+            lastFetchTime = Date.now();
+            console.log(`Proxy cache updated with ${proxiesText.split('\n').length} unique proxies.`);
+        } else {
+            console.error("Failed to fetch any proxies, cache not updated.");
+        }
+    } catch (error) {
+        console.error("Error updating proxy cache:", error);
+    } finally {
+        isFetching = false;
+    }
+};
+
+const server = createServer(async (req, res) => {
+    const cacheIsStale = Date.now() - lastFetchTime >= CACHE_DURATION_MS;
+
+    if (!cachedCompressedProxies || cacheIsStale) {
+        await updateCache();
+    }
+
+    if (!cachedCompressedProxies) {
+        res.writeHead(503, { "Content-Type": "text/plain" });
+        res.end("Service Unavailable: Proxies are being updated.");
+        return;
+    }
+
+    res.writeHead(200, {
+        "Content-Type": "text/plain",
+        "Content-Encoding": "gzip",
+    });
+    res.end(cachedCompressedProxies);
+});
+
 server.listen(PORT, HOST, () => {
     console.log(`Server is listening on http://${HOST}:${PORT}`);
+    updateCache();
 });
