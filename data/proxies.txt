@@ -10,3 +10,4 @@ https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/http.txt
 https://raw.githubusercontent.com/ALIILAPRO/Proxy/main/http.txt
 https://raw.githubusercontent.com/saisuiu/Lionkings-Http-Proxys-Proxies/main/free.txt
 https://raw.githubusercontent.com/mmpx12/proxy-list/master/http.txt
+https://rcloak.com/api/proxies/raw?protocol=http
